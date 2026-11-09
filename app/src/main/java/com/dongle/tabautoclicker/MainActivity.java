@@ -36,7 +36,7 @@ public class MainActivity extends Activity {
         addGap(root, 12);
         addInfo(root, "꾹 누르기", "1초");
         addInfo(root, "대기", "6초 (터치하지 않음)");
-        addInfo(root, "자동 클릭", "5초 동안 1초 간격");
+        addInfo(root, "자동 클릭", "5초 동안 0.1초 간격 (초당 10회)");
         addInfo(root, "반복 횟수", "무한 반복 · 정지 버튼으로 종료");
         addGap(root, 26);
 

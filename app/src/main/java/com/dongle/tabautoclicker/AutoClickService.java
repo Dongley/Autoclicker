@@ -25,9 +25,9 @@ import android.widget.Toast;
 public class AutoClickService extends AccessibilityService {
     private static final long CLICK_PHASE_MS = 5_000L;
     private static final long WAIT_DURATION_MS = 6_000L;
-    private static final long CLICK_INTERVAL_MS = 1_000L;
+    private static final long CLICK_INTERVAL_MS = 100L;
     private static final long HOLD_DURATION_MS = 1_000L;
-    private static final long TAP_DURATION_MS = 75L;
+    private static final long TAP_DURATION_MS = 40L;
 
     private static AutoClickService instance;
     public static AutoClickService getInstance() { return instance; }
@@ -296,7 +296,7 @@ public class AutoClickService extends AccessibilityService {
         dispatchStroke(HOLD_DURATION_MS, new GestureResultCallback() {
             @Override public void onCompleted(GestureDescription gesture) {
                 if (running && currentSequenceId == sequenceId) {
-                    // Wait 6 seconds with no touches, then click once a second for 5 seconds.
+                    // Wait 6 seconds with no touches, then click every 100 ms for 5 seconds.
                     handler.postDelayed(AutoClickService.this::beginClickPhase, WAIT_DURATION_MS);
                 }
             }
