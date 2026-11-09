@@ -38,13 +38,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ "$(git log -1 --format=%s)" == "Publish eggclicker v1.3.0" ]]; then
-            if gh release view "v1.3.0" >/dev/null 2>&1; then
-              gh release upload "v1.3.0" eggclicker.apk --clobber
+          if [[ "$(git log -1 --format=%s)" == "Publish eggclicker v1.4.0" ]]; then
+            if gh release view "v1.4.0" >/dev/null 2>&1; then
+              gh release upload "v1.4.0" eggclicker.apk --clobber
             else
-              gh release create "v1.3.0" eggclicker.apk \
-                --title "eggclicker v1.3.0" \
-                --notes "갤럭시 탭용 자동 클릭 앱입니다. 1초 동안 길게 누르고 5초 대기한 다음 5초 동안 0.1초 간격으로 빠르게 자동 클릭합니다. 마지막 터치가 끝나면 추가 대기 없이 즉시 반복합니다. APK를 설치한 후 앱에서 접근성 서비스를 켜고 클릭 위치를 지정하세요. Android 8.0 이상에서 실행하도록 구성했습니다."
+              gh release create "v1.4.0" eggclicker.apk \
+                --title "eggclicker v1.4.0" \
+                --notes "갤럭시 탭용 자동 클릭 앱입니다. 1.5초 동안 길게 누르고 6초 대기, 3.5초 동안 0.1초 간격으로 자동 클릭한 다음 3초 대기합니다. 이 동작을 반복합니다. APK를 설치한 후 앱에서 접근성 서비스를 켜고 클릭 위치를 지정하세요. Android 8.0 이상에서 실행하도록 구성했습니다."
             fi
           else
             echo "This is a regular build; skipping one-time release publication."
