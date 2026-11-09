@@ -23,7 +23,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class AutoClickService extends AccessibilityService {
-    private static final long CLICK_PHASE_MS = 10_000L;
+    private static final long CLICK_PHASE_MS = 5_000L;
+    private static final long WAIT_DURATION_MS = 6_000L;
     private static final long CLICK_INTERVAL_MS = 1_000L;
     private static final long HOLD_DURATION_MS = 1_000L;
     private static final long TAP_DURATION_MS = 75L;
@@ -40,6 +41,7 @@ public class AutoClickService extends AccessibilityService {
     private TextView marker;
     private Button startStop;
     private boolean running = false;
+    private int sequenceId = 0;
     private long cycleStartUptime;
     private int clickX = -1;
     private int clickY = -1;
@@ -251,11 +253,18 @@ public class AutoClickService extends AccessibilityService {
         }
         if (running) return;
         running = true;
+        sequenceId++;
         updateStartButton();
         beginCycle();
     }
 
     private void beginCycle() {
+        if (!running) return;
+        // Each cycle begins with a 1-second long press.
+        beginHold();
+    }
+
+    private void beginClickPhase() {
         if (!running) return;
         cycleStartUptime = SystemClock.uptimeMillis();
         scheduleClick(0);
@@ -265,8 +274,8 @@ public class AutoClickService extends AccessibilityService {
         if (!running) return;
         long offset = index * CLICK_INTERVAL_MS;
         if (offset >= CLICK_PHASE_MS) {
-            long holdTime = Math.max(SystemClock.uptimeMillis(), cycleStartUptime + CLICK_PHASE_MS);
-            handler.postAtTime(this::beginHold, holdTime);
+            long nextCycleTime = Math.max(SystemClock.uptimeMillis(), cycleStartUptime + CLICK_PHASE_MS);
+            handler.postAtTime(this::beginCycle, nextCycleTime);
             return;
         }
         long scheduledUptime = cycleStartUptime + offset;
@@ -283,12 +292,18 @@ public class AutoClickService extends AccessibilityService {
 
     private void beginHold() {
         if (!running) return;
+        final int currentSequenceId = sequenceId;
         dispatchStroke(HOLD_DURATION_MS, new GestureResultCallback() {
             @Override public void onCompleted(GestureDescription gesture) {
-                if (running) handler.post(AutoClickService.this::beginCycle);
+                if (running && currentSequenceId == sequenceId) {
+                    // Wait 6 seconds with no touches, then click once a second for 5 seconds.
+                    handler.postDelayed(AutoClickService.this::beginClickPhase, WAIT_DURATION_MS);
+                }
             }
             @Override public void onCancelled(GestureDescription gesture) {
-                if (running) handler.postDelayed(AutoClickService.this::beginCycle, 200);
+                if (running && currentSequenceId == sequenceId) {
+                    handler.postDelayed(AutoClickService.this::beginCycle, 200);
+                }
             }
         });
     }
@@ -308,6 +323,7 @@ public class AutoClickService extends AccessibilityService {
 
     private void stopLoop() {
         running = false;
+        sequenceId++;
         handler.removeCallbacksAndMessages(null);
         updateStartButton();
     }
