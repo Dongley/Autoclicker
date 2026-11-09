@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
         root.addView(label("반복 동작", 19, Color.WHITE, true));
         addGap(root, 12);
         addInfo(root, "꾹 누르기", "1초");
-        addInfo(root, "대기", "6초 (터치하지 않음)");
+        addInfo(root, "대기", "5초 (터치하지 않음)");
         addInfo(root, "자동 클릭", "5초 동안 0.1초 간격 (초당 10회)");
         addInfo(root, "반복 횟수", "무한 반복 · 정지 버튼으로 종료");
         addGap(root, 26);
@@ -68,7 +68,7 @@ public class MainActivity extends Activity {
         root.addView(label("1. 접근성 설정에서 ‘탭 오토클리커 접근성 서비스’를 켜세요.\n"
                 + "2. 원하는 앱으로 이동하세요.\n"
                 + "3. 떠 있는 버튼에서 ‘위치’를 누르고 화면의 한 지점을 터치하세요.\n"
-                + "4. ‘시작’을 누르면 1초 꾹 누르기 → 6초 대기 → 5초 자동 클릭이 반복됩니다.\n"
+                + "4. ‘시작’을 누르면 1초 꾹 누르기 → 5초 대기 → 5초 자동 클릭이 반복됩니다.\n"
                 + "5. 멈출 때는 떠 있는 ‘정지’ 버튼을 누르세요.",
                 15, Color.rgb(188,204,221), false));
         addGap(root, 18);

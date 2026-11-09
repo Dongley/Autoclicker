@@ -24,7 +24,7 @@ import android.widget.Toast;
 
 public class AutoClickService extends AccessibilityService {
     private static final long CLICK_PHASE_MS = 5_000L;
-    private static final long WAIT_DURATION_MS = 6_000L;
+    private static final long WAIT_DURATION_MS = 5_000L;
     private static final long CLICK_INTERVAL_MS = 100L;
     private static final long HOLD_DURATION_MS = 1_000L;
     private static final long TAP_DURATION_MS = 40L;
@@ -274,8 +274,8 @@ public class AutoClickService extends AccessibilityService {
         if (!running) return;
         long offset = index * CLICK_INTERVAL_MS;
         if (offset >= CLICK_PHASE_MS) {
-            long nextCycleTime = Math.max(SystemClock.uptimeMillis(), cycleStartUptime + CLICK_PHASE_MS);
-            handler.postAtTime(this::beginCycle, nextCycleTime);
+            // No extra pause between cycles, even if a scheduled tap was skipped.
+            handler.post(this::beginCycle);
             return;
         }
         long scheduledUptime = cycleStartUptime + offset;
@@ -285,8 +285,23 @@ public class AutoClickService extends AccessibilityService {
         }
         handler.postAtTime(() -> {
             if (!running) return;
-            dispatchStroke(TAP_DURATION_MS, null);
-            scheduleClick(index + 1);
+            if (offset + CLICK_INTERVAL_MS >= CLICK_PHASE_MS) {
+                // Restart as soon as the final tap is released (no intentional waiting).
+                final int currentSequenceId = sequenceId;
+                dispatchStroke(TAP_DURATION_MS, new GestureResultCallback() {
+                    @Override public void onCompleted(GestureDescription gesture) {
+                        if (running && currentSequenceId == sequenceId)
+                            handler.post(AutoClickService.this::beginCycle);
+                    }
+                    @Override public void onCancelled(GestureDescription gesture) {
+                        if (running && currentSequenceId == sequenceId)
+                            handler.post(AutoClickService.this::beginCycle);
+                    }
+                });
+            } else {
+                dispatchStroke(TAP_DURATION_MS, null);
+                scheduleClick(index + 1);
+            }
         }, Math.max(SystemClock.uptimeMillis(), scheduledUptime));
     }
 
@@ -296,7 +311,7 @@ public class AutoClickService extends AccessibilityService {
         dispatchStroke(HOLD_DURATION_MS, new GestureResultCallback() {
             @Override public void onCompleted(GestureDescription gesture) {
                 if (running && currentSequenceId == sequenceId) {
-                    // Wait 6 seconds with no touches, then click every 100 ms for 5 seconds.
+                    // Wait 5 seconds with no touches, then click every 100 ms for 5 seconds.
                     handler.postDelayed(AutoClickService.this::beginClickPhase, WAIT_DURATION_MS);
                 }
             }
