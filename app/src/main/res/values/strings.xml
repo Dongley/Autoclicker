@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">탭 오토클리커</string>
+    <string name="accessibility_description">선택한 한 지점을 10초 동안 1초 간격으로 누르고, 이어서 1초 동안 길게 누르는 동작을 반복합니다. 화면 내용은 읽지 않습니다.</string>
+</resources>
