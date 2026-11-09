@@ -7,7 +7,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -26,8 +26,26 @@ jobs:
           gradle-version: '8.9'
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon
+      - name: Name installable APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk eggclicker.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: TabAutoClicker-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: eggclicker-APK
+          path: eggclicker.apk
           if-no-files-found: error
+      - name: Publish eggclicker GitHub Release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$(git log -1 --format=%s)" == "Publish eggclicker v1.0.0" ]]; then
+            if gh release view "v1.0.0" >/dev/null 2>&1; then
+              gh release upload "v1.0.0" eggclicker.apk --clobber
+            else
+              gh release create "v1.0.0" eggclicker.apk \
+                --title "eggclicker v1.0.0" \
+                --notes "갤럭시 탭용 자동 클릭 앱입니다. 10초간 1초 간격으로 클릭한 뒤 1초 길게 누르기를 반복합니다. APK를 설치한 후 앱에서 접근성 서비스를 켜고 클릭 위치를 지정하세요. Android 8.0 이상에서 실행하도록 구성했습니다."
+            fi
+          else
+            echo "This is a regular build; skipping one-time release publication."
+          fi
