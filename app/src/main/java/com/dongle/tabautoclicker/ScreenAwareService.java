@@ -199,11 +199,12 @@ public class ScreenAwareService extends AccessibilityService {
         if(state==State.TAPPING) {
             boolean full=gaugeFull(frame);
             frame.recycle();screenshotBusy=false;
-            if(full){setState(State.WAIT_RESET,"게이지 완료");}
+            if(full){setState(State.WAIT_CAST,"다음 캐스트 감지");}
             return;
         }
         // OCR only when waiting for a new UI state; not on every fast tap.
-        InputImage image=InputImage.fromBitmap(frame,0);
+        Bitmap cropped = Bitmap.createBitmap(frame, 0, (int)(frame.getHeight() * 0.68f), frame.getWidth(), frame.getHeight() - (int)(frame.getHeight() * 0.68f));
+        InputImage image=InputImage.fromBitmap(cropped,0);
         recognizer.process(image).addOnSuccessListener(result->{
             if(!running || token!=generation)return;
             String s=result.getText().replaceAll("\\s+","").toLowerCase();
@@ -217,7 +218,7 @@ public class ScreenAwareService extends AccessibilityService {
                 setState(State.HOLDING,"다음 캐스팅");
                 gesture(1500,()->setState(State.WAIT_TAP,"탭 대기"));
             }
-        }).addOnCompleteListener(task->{frame.recycle();screenshotBusy=false;});
+        }).addOnCompleteListener(task->{cropped.recycle();frame.recycle();screenshotBusy=false;});
     }
     private boolean lime(int c) {
         int r=Color.red(c),g=Color.green(c),b=Color.blue(c);
