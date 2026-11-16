@@ -209,8 +209,12 @@ public class ScreenAwareService extends AccessibilityService {
             }
             lastTapOcr=now;
         }
-        int top=(int)(frame.getHeight()*.68f);
-        Bitmap cropped=Bitmap.createBitmap(frame,0,top,frame.getWidth(),frame.getHeight()-top);
+        // Cast prompt is beside the character around screen center; tap prompt is at the bottom.
+        int top=(int)(frame.getHeight()*
+            (state==State.WAIT_TAP ? .68f : .25f));
+        int bottom=(int)(frame.getHeight()*
+            (state==State.WAIT_TAP ? 1.0f : .75f));
+        Bitmap cropped=Bitmap.createBitmap(frame,0,top,frame.getWidth(),bottom-top);
         InputImage image=InputImage.fromBitmap(cropped,0);
         recognizer.process(image).addOnSuccessListener(result->{
             if(!running || token!=generation)return;
