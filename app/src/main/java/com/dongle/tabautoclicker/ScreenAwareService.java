@@ -46,6 +46,7 @@ public class ScreenAwareService extends AccessibilityService {
     private static final long MAX_WAIT_MS = 60000;
     private static final int SAMPLE_MS = 100;
     private long lastTapOcr = 0;
+    private long lastCastStart = 0;
     private SharedPreferences prefs;
     private static ScreenAwareService instance;
     public static ScreenAwareService getInstance() { return instance; }
@@ -169,7 +170,9 @@ public class ScreenAwareService extends AccessibilityService {
         long elapsed=SystemClock.uptimeMillis()-phaseStart;
         if(state==State.TAPPING && elapsed>MAX_TAP_MS) {
             setState(State.WAIT_RESET,"클릭 제한시간");
-        } else if((state==State.WAIT_TAP || state==State.WAIT_RESET) && elapsed>MAX_WAIT_MS) {
+        } else if(state==State.WAIT_TAP && elapsed>5000) {
+            setState(State.WAIT_CAST,"캐스트 재확인");
+        } else if(state==State.WAIT_RESET && elapsed>MAX_WAIT_MS) {
             setState(State.WAIT_CAST,"대기 재시작");
         }
         if(!screenshotBusy && state!=State.HOLDING) capture(generation);
@@ -211,7 +214,7 @@ public class ScreenAwareService extends AccessibilityService {
         }
         // Cast prompt is beside the character around screen center; tap prompt is at the bottom.
         int top=(int)(frame.getHeight()*
-            (state==State.WAIT_TAP ? .68f : .25f));
+            (state==State.WAIT_TAP ? .20f : .25f));
         int bottom=(int)(frame.getHeight()*
             (state==State.WAIT_TAP ? 1.0f : .75f));
         Bitmap cropped=Bitmap.createBitmap(frame,0,top,frame.getWidth(),bottom-top);
@@ -220,7 +223,9 @@ public class ScreenAwareService extends AccessibilityService {
             if(!running || token!=generation)return;
             String s=result.getText().replaceAll("\\s+","").toLowerCase();
             boolean cast=s.contains("캐스트하기") || s.contains("길게눌러");
-            if(cast && (state==State.WAIT_CAST || state==State.WAIT_RESET || state==State.TAPPING)) {
+            if(cast && (state==State.WAIT_CAST || state==State.WAIT_RESET || state==State.TAPPING ||
+                    (state==State.WAIT_TAP && SystemClock.uptimeMillis()-lastCastStart>3000))) {
+                lastCastStart=SystemClock.uptimeMillis();
                 setState(State.HOLDING,"캐스팅");
                 gesture(1500,()->setState(State.WAIT_TAP,"탭 대기"));
             } else if(state==State.WAIT_TAP && (s.contains("빠르게탭") || s.contains("탭하세요"))) {
