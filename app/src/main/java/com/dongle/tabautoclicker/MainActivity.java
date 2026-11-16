@@ -29,15 +29,15 @@ public class MainActivity extends Activity {
 
         root.addView(label("탭 오토클리커", 27, Color.WHITE, true));
         addGap(root, 8);
-        root.addView(label("갤럭시 탭 · Android 8.0 이상", 14, Color.rgb(160,177,199), false));
+        root.addView(label("화면 인식 테스트 · Android 11 이상", 14, Color.rgb(160,177,199), false));
         addGap(root, 26);
 
         root.addView(label("반복 동작", 19, Color.WHITE, true));
         addGap(root, 12);
         addInfo(root, "꾹 누르기", "1.5초");
-        addInfo(root, "첫 번째 대기", "6초 (터치하지 않음)");
-        addInfo(root, "자동 클릭", "3.5초 동안 0.1초 간격 (초당 10회)");
-        addInfo(root, "두 번째 대기", "3초 (터치하지 않음)");
+        addInfo(root, "첫 번째 대기", "빠르게 탭하세요! 화면까지 대기");
+        addInfo(root, "자동 클릭", "게이지 양쪽 끝까지 자동 클릭");
+        addInfo(root, "두 번째 대기", "다음 캐스팅 화면까지 대기");
         addInfo(root, "반복 횟수", "무한 반복 · 정지 버튼으로 종료");
         addGap(root, 26);
 
@@ -58,7 +58,7 @@ public class MainActivity extends Activity {
         Button showFloat = button("② 화면 위에 조작 버튼 표시");
         root.addView(showFloat);
         showFloat.setOnClickListener(v -> {
-            AutoClickService service = AutoClickService.getInstance();
+            ScreenAwareService service = ScreenAwareService.getInstance();
             if (service != null) service.showController();
             else startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
         });
@@ -69,11 +69,11 @@ public class MainActivity extends Activity {
         root.addView(label("1. 접근성 설정에서 ‘탭 오토클리커 접근성 서비스’를 켜세요.\n"
                 + "2. 원하는 앱으로 이동하세요.\n"
                 + "3. 떠 있는 버튼에서 ‘위치’를 누르고 화면의 한 지점을 터치하세요.\n"
-                + "4. ‘시작’을 누르면 1.5초 꾹 누르기 → 6초 대기 → 3.5초 자동 클릭 → 3초 대기가 반복됩니다.\n"
+                + "4. ‘시작’을 누르면 캐스팅 문구 → 1.5초 꾹 누르기 → 탭 문구 → 게이지 완료까지 클릭합니다.\n"
                 + "5. 멈출 때는 떠 있는 ‘정지’ 버튼을 누르세요.",
                 15, Color.rgb(188,204,221), false));
         addGap(root, 18);
-        root.addView(label("이 앱은 화면 내용을 읽거나 인터넷에 연결하지 않습니다. 화면 제어를 위해 접근성 권한만 사용합니다.",
+        root.addView(label("이 테스트 버전은 화면 캡처와 한국어 문자 인식으로 상태를 판별합니다. Android 11 이상에서 동작합니다. 기기별 UI 차이로 오인식할 수 있습니다.",
                 12, Color.rgb(132,151,173), false));
         setContentView(scroll);
     }
@@ -84,7 +84,7 @@ public class MainActivity extends Activity {
     }
 
     private void refreshState() {
-        AutoClickService service = AutoClickService.getInstance();
+        ScreenAwareService service = ScreenAwareService.getInstance();
         if (service == null) {
             status.setText("● 접근성 서비스 꺼짐");
             status.setTextColor(Color.rgb(255,170,122));
