@@ -47,6 +47,7 @@ public class ScreenAwareService extends AccessibilityService {
     private static final int SAMPLE_MS = 100;
     private long lastTapOcr = 0;
     private long lastCastStart = 0;
+    private boolean castPending = false;
     private SharedPreferences prefs;
     private static ScreenAwareService instance;
     public static ScreenAwareService getInstance() { return instance; }
@@ -152,14 +153,14 @@ public class ScreenAwareService extends AccessibilityService {
             return;
         }
         if(x<0 || y<0) {Toast.makeText(this,"먼저 위치를 지정하세요",Toast.LENGTH_SHORT).show();return;}
-        running=true;generation++;gestureBusy=false;screenshotBusy=false;
+        running=true;generation++;gestureBusy=false;screenshotBusy=false;castPending=false;
         setState(State.WAIT_CAST,"캐스트 감지");
         for(int i=0;i<controls.getChildCount();i++) if("toggle".equals(controls.getChildAt(i).getTag()))
             ((Button)controls.getChildAt(i)).setText("정지");
         main.post(this::poll);
     }
     private void stop() {
-        running=false;generation++;main.removeCallbacksAndMessages(null);
+        running=false;generation++;castPending=false;main.removeCallbacksAndMessages(null);
         screenshotBusy=false;gestureBusy=false;
         if(status!=null)status.setText("정지");
         if(controls!=null)for(int i=0;i<controls.getChildCount();i++)
@@ -171,7 +172,7 @@ public class ScreenAwareService extends AccessibilityService {
         if(state==State.TAPPING && elapsed>MAX_TAP_MS) {
             setState(State.WAIT_RESET,"클릭 제한시간");
         } else if(state==State.WAIT_TAP && elapsed>5000) {
-            setState(State.WAIT_CAST,"캐스트 재확인");
+            setState(State.WAIT_CAST,"캐스트 감지");
         } else if(state==State.WAIT_RESET && elapsed>MAX_WAIT_MS) {
             setState(State.WAIT_CAST,"대기 재시작");
         }
@@ -225,14 +226,26 @@ public class ScreenAwareService extends AccessibilityService {
             boolean cast=s.contains("캐스트하기") || s.contains("길게눌러");
             if(cast && (state==State.WAIT_CAST || state==State.WAIT_RESET || state==State.TAPPING ||
                     (state==State.WAIT_TAP && SystemClock.uptimeMillis()-lastCastStart>3000))) {
-                lastCastStart=SystemClock.uptimeMillis();
-                setState(State.HOLDING,"캐스팅");
-                gesture(1500,()->setState(State.WAIT_TAP,"탭 대기"));
+                requestCast();
             } else if(state==State.WAIT_TAP && (s.contains("빠르게탭") || s.contains("탭하세요"))) {
                 setState(State.TAPPING,"연속 클릭");
                 tap();
             }
         }).addOnCompleteListener(task->{cropped.recycle();frame.recycle();screenshotBusy=false;});
+    }
+    private void requestCast() {
+        if(!running || state==State.HOLDING || castPending)return;
+        castPending=true;
+        // Do not interrupt an in-flight rapid tap gesture with the long press.
+        setState(State.HOLDING,"캐스팅 준비");
+        if(!gestureBusy)performCast();
+    }
+    private void performCast() {
+        if(!running || !castPending || gestureBusy)return;
+        castPending=false;
+        lastCastStart=SystemClock.uptimeMillis();
+        setState(State.HOLDING,"캐스팅 중");
+        gesture(1500,()->setState(State.WAIT_TAP,"탭 대기"));
     }
     private boolean lime(int c) {
         int r=Color.red(c),g=Color.green(c),b=Color.blue(c);
@@ -275,9 +288,10 @@ public class ScreenAwareService extends AccessibilityService {
             private void finish(){
                 if(token!=generation)return;
                 gestureBusy=false;
+                if(running && castPending) {performCast();return;}
                 if(running && done!=null)done.run();
             }
         },main);
-        if(!accepted){gestureBusy=false;stop();}
+        if(!accepted){gestureBusy=false;castPending=false;stop();}
     }
 }
