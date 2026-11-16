@@ -79,48 +79,60 @@ public class ScreenAwareService extends AccessibilityService {
         return b;
     }
     public void showController() {
-        if (wm == null || controls != null) return;
-        controls = new LinearLayout(this);
-        controls.setGravity(Gravity.CENTER_VERTICAL);
-        controls.setPadding(5,3,5,3);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.rgb(25,30,45)); bg.setCornerRadius(16);
+        if(wm==null || controls!=null)return;
+        controls=new LinearLayout(this);
+        controls.setOrientation(LinearLayout.VERTICAL);
+        controls.setPadding(8,6,8,6);
+        GradientDrawable bg=new GradientDrawable();
+        bg.setColor(Color.rgb(25,30,45));bg.setCornerRadius(24);
         controls.setBackground(bg);
-        TextView handle = new TextView(this);
-        handle.setText("☷"); handle.setTextColor(Color.WHITE); handle.setTextSize(23);
-        handle.setPadding(10,5,10,5);
-        controls.addView(handle);
-        Button position = button("위치");
-        controls.addView(position);
-        position.setOnClickListener(v -> choosePoint());
-        Button toggle = button("시작");
-        controls.addView(toggle);
-        toggle.setOnClickListener(v -> { if(running) stop(); else start(); });
-        status = new TextView(this);
-        status.setTextColor(Color.WHITE); status.setTextSize(11);
-        status.setText("대기");
-        status.setPadding(5,0,5,0);
-        controls.addView(status);
-        WindowManager.LayoutParams p = overlayParams(-2,-2,
+        LinearLayout header=new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView handle=new TextView(this);
+        handle.setText("≡");handle.setTextColor(Color.WHITE);handle.setTextSize(22);
+        handle.setPadding(12,3,12,3);
+        header.addView(handle);
+        status=new TextView(this);
+        status.setText("대기");status.setTextColor(0xFFB9D5F6);status.setTextSize(12);
+        status.setPadding(5,0,10,0);
+        header.addView(status);
+        Button expand=button("⌄");
+        header.addView(expand);
+        controls.addView(header);
+        LinearLayout actions=new LinearLayout(this);
+        actions.setGravity(Gravity.CENTER_VERTICAL);
+        Button position=button("◎ 위치");
+        actions.addView(position);
+        position.setOnClickListener(v->choosePoint());
+        Button toggle=button("▶ 시작");
+        toggle.setTag("toggle");
+        actions.addView(toggle);
+        toggle.setOnClickListener(v->{if(running)stop();else start();});
+        controls.addView(actions);
+        expand.setOnClickListener(v->{
+            boolean open=actions.getVisibility()!=View.VISIBLE;
+            actions.setVisibility(open?View.VISIBLE:View.GONE);
+            expand.setText(open?"⌄":"⌃");
+        });
+        actions.setVisibility(View.GONE);
+        WindowManager.LayoutParams p=overlayParams(-2,-2,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);
-        p.gravity = Gravity.TOP | Gravity.LEFT;
-        p.x=12; p.y=130;
-        handle.setOnTouchListener(new View.OnTouchListener() {
-            float downX,downY; int initialX,initialY;
-            public boolean onTouch(View v, MotionEvent e) {
-                if(e.getActionMasked()==MotionEvent.ACTION_DOWN) {
+        p.gravity=Gravity.TOP | Gravity.LEFT;p.x=12;p.y=130;
+        handle.setOnTouchListener(new View.OnTouchListener(){
+            float downX,downY;int initialX,initialY;
+            public boolean onTouch(View v,MotionEvent e){
+                if(e.getActionMasked()==MotionEvent.ACTION_DOWN){
                     downX=e.getRawX();downY=e.getRawY();initialX=p.x;initialY=p.y;return true;
                 }
-                if(e.getActionMasked()==MotionEvent.ACTION_MOVE) {
+                if(e.getActionMasked()==MotionEvent.ACTION_MOVE){
                     p.x=initialX+(int)(e.getRawX()-downX);
                     p.y=initialY+(int)(e.getRawY()-downY);
-                    try {wm.updateViewLayout(controls,p);}catch(Exception ignored){}
+                    try{wm.updateViewLayout(controls,p);}catch(Exception ignored){}
                 }
                 return true;
             }
         });
-        toggle.setTag("toggle");
-        try {wm.addView(controls,p);}catch(Exception e){controls=null;}
+        try{wm.addView(controls,p);}catch(Exception e){controls=null;}
     }
     private WindowManager.LayoutParams overlayParams(int w,int h,int flags) {
         return new WindowManager.LayoutParams(w,h,WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
@@ -155,16 +167,22 @@ public class ScreenAwareService extends AccessibilityService {
         if(x<0 || y<0) {Toast.makeText(this,"먼저 위치를 지정하세요",Toast.LENGTH_SHORT).show();return;}
         running=true;generation++;gestureBusy=false;screenshotBusy=false;castPending=false;
         setState(State.WAIT_CAST,"캐스트 감지");
-        for(int i=0;i<controls.getChildCount();i++) if("toggle".equals(controls.getChildAt(i).getTag()))
-            ((Button)controls.getChildAt(i)).setText("정지");
+        for(int i=0;i<controls.getChildCount();i++) if(controls.getChildAt(i) instanceof LinearLayout) {
+            LinearLayout row=(LinearLayout)controls.getChildAt(i);
+            for(int j=0;j<row.getChildCount();j++)if("toggle".equals(row.getChildAt(j).getTag()))
+                ((Button)row.getChildAt(j)).setText("■ 정지");
+        }
         main.post(this::poll);
     }
     private void stop() {
         running=false;generation++;castPending=false;main.removeCallbacksAndMessages(null);
         screenshotBusy=false;gestureBusy=false;
         if(status!=null)status.setText("정지");
-        if(controls!=null)for(int i=0;i<controls.getChildCount();i++)
-            if("toggle".equals(controls.getChildAt(i).getTag()))((Button)controls.getChildAt(i)).setText("시작");
+        if(controls!=null)for(int i=0;i<controls.getChildCount();i++)if(controls.getChildAt(i) instanceof LinearLayout){
+            LinearLayout row=(LinearLayout)controls.getChildAt(i);
+            for(int j=0;j<row.getChildCount();j++)if("toggle".equals(row.getChildAt(j).getTag()))
+                ((Button)row.getChildAt(j)).setText("▶ 시작");
+        }
     }
     private void poll() {
         if(!running)return;
