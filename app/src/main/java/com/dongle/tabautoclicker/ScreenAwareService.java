@@ -44,7 +44,8 @@ public class ScreenAwareService extends AccessibilityService {
     private long phaseStart;
     private static final long MAX_TAP_MS = 20000;
     private static final long MAX_WAIT_MS = 60000;
-    private static final int SAMPLE_MS = 180;
+    private static final int SAMPLE_MS = 100;
+    private long lastTapOcr = 0;
     private SharedPreferences prefs;
     private static ScreenAwareService instance;
     public static ScreenAwareService getInstance() { return instance; }
@@ -208,16 +209,14 @@ public class ScreenAwareService extends AccessibilityService {
         recognizer.process(image).addOnSuccessListener(result->{
             if(!running || token!=generation)return;
             String s=result.getText().replaceAll("\\s+","").toLowerCase();
-            if(state==State.WAIT_CAST && (s.contains("캐스트하기") || s.contains("길게눌러"))) {
+            if((state==State.WAIT_CAST || state==State.WAIT_RESET || state==State.TAPPING)
+                    && (s.contains("캐스트하기") || s.contains("길게눌러"))) {
                 setState(State.HOLDING,"캐스팅");
                 gesture(1500,()->setState(State.WAIT_TAP,"탭 대기"));
             } else if(state==State.WAIT_TAP && (s.contains("빠르게탭") || s.contains("탭하세요"))) {
                 setState(State.TAPPING,"연속 클릭");
                 tap();
-            } else if(state==State.WAIT_RESET && (s.contains("캐스트하기") || s.contains("길게눌러"))) {
-                setState(State.HOLDING,"다음 캐스팅");
-                gesture(1500,()->setState(State.WAIT_TAP,"탭 대기"));
-            }
+            
         }).addOnCompleteListener(task->{cropped.recycle();frame.recycle();screenshotBusy=false;});
     }
     private boolean lime(int c) {
