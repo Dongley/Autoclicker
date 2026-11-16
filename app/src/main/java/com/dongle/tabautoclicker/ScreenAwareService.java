@@ -198,25 +198,31 @@ public class ScreenAwareService extends AccessibilityService {
     private void process(Bitmap frame,int token) {
         if(!running || token!=generation){frame.recycle();screenshotBusy=false;return;}
         if(state==State.TAPPING) {
-            boolean full=gaugeFull(frame);
-            frame.recycle();screenshotBusy=false;
-            if(full){setState(State.WAIT_CAST,"다음 캐스트 감지");}
-            return;
+            if(gaugeFull(frame)) {
+                frame.recycle();screenshotBusy=false;
+                setState(State.WAIT_CAST,"다음 캐스트 감지");
+                return;
+            }
+            long now=SystemClock.uptimeMillis();
+            if(now-lastTapOcr<450 || now-phaseStart<700) {
+                frame.recycle();screenshotBusy=false;return;
+            }
+            lastTapOcr=now;
         }
-        // OCR only when waiting for a new UI state; not on every fast tap.
-        Bitmap cropped = Bitmap.createBitmap(frame, 0, (int)(frame.getHeight() * 0.68f), frame.getWidth(), frame.getHeight() - (int)(frame.getHeight() * 0.68f));
+        int top=(int)(frame.getHeight()*.68f);
+        Bitmap cropped=Bitmap.createBitmap(frame,0,top,frame.getWidth(),frame.getHeight()-top);
         InputImage image=InputImage.fromBitmap(cropped,0);
         recognizer.process(image).addOnSuccessListener(result->{
             if(!running || token!=generation)return;
             String s=result.getText().replaceAll("\\s+","").toLowerCase();
-            if((state==State.WAIT_CAST || state==State.WAIT_RESET || state==State.TAPPING)
-                    && (s.contains("캐스트하기") || s.contains("길게눌러"))) {
+            boolean cast=s.contains("캐스트하기") || s.contains("길게눌러");
+            if(cast && (state==State.WAIT_CAST || state==State.WAIT_RESET || state==State.TAPPING)) {
                 setState(State.HOLDING,"캐스팅");
                 gesture(1500,()->setState(State.WAIT_TAP,"탭 대기"));
             } else if(state==State.WAIT_TAP && (s.contains("빠르게탭") || s.contains("탭하세요"))) {
                 setState(State.TAPPING,"연속 클릭");
                 tap();
-            
+            }
         }).addOnCompleteListener(task->{cropped.recycle();frame.recycle();screenshotBusy=false;});
     }
     private boolean lime(int c) {
