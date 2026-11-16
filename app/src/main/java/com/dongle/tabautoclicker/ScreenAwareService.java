@@ -214,7 +214,8 @@ public class ScreenAwareService extends AccessibilityService {
                 setState(State.TAPPING,"연속 클릭");
                 tap();
             } else if(state==State.WAIT_RESET && (s.contains("캐스트하기") || s.contains("길게눌러"))) {
-                setState(State.WAIT_CAST,"다음 캐스트");
+                setState(State.HOLDING,"다음 캐스팅");
+                gesture(1500,()->setState(State.WAIT_TAP,"탭 대기"));
             }
         }).addOnCompleteListener(task->{frame.recycle();screenshotBusy=false;});
     }
